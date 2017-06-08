@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Geo Location</title>
+<style type="text/css">
+html { height: 100% }
+body { height: 100%; margin: 0; padding: 0 }
+#map { height: 100% }
+</style>
+<script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+<script type="text/javascript" src="cordova.js"></script>
+<script type="text/javascript">
+(function (global) {
+    "use strict";
+
+    function onDeviceReady () {
+        document.addEventListener("online", onOnline, false);
+        document.addEventListener("resume", onResume, false);
+        loadMapsApi();
+    }
+
+    function onOnline () {
+        loadMapsApi();
+    }
+
+    function onResume () {
+        loadMapsApi();
+    }
+
+    function loadMapsApi () {
+        if((navigator.connection && navigator.connection.type === Connection.NONE) || (typeof google !== "undefined" && google.maps)) {
+            return;
+        }
+
+        $.getScript('https://maps.googleapis.com/maps/api/js?key=AIzaSyBANfDZ5Gfd8aGyQ7T9ypAS8nHnAPLJqDs&sensor=true&callback=onMapsApiLoaded');
+    }
+
+    function loadHospitals(map) {
+      var infowindow = null;
+
+      $.ajax({
+        url: "http://riohospital.herokuapp.com/hospitals",
+        success: function(result) {
+          console.log(result);
+          for(var i=0; i < result.length; i++) {
+            let hospital = result[i];
+            let marker = new google.maps.Marker({
+              icon: "img/hospital-building.png",
+              title: hospital.name,
+              position: new google.maps.LatLng(hospital.latitude,hospital.longitude),
+              map: map
+            });
+
+            let contentString = "<h4>" + hospital.name + "</h4>" +
+                                "<h5>Endereço: " + hospital.address + "</h5>" +
+                                "<h5>Bairro: " + hospital.neighborhood + "</h5>" +
+                                "<h5>Telefone: " + hospital.phone + "</h5>";
+
+            google.maps.event.addListener(marker, 'click', function() {
+  						if (infowindow) infowindow.close();
+  						infowindow = new google.maps.InfoWindow({
+  							content: contentString,
+  							maxWidth: 200
+  						});
+      				infowindow.open(map, marker);
+    				});
+          }
+        }
+      });
+    }
+
+    global.onMapsApiLoaded = function () {
+        // Maps API loaded and ready to be used.
+
+        navigator.geolocation.getCurrentPosition(onSuccess, onError, { timeout: 30000 });
+
+        function onSuccess(position) {
+          var lat=position.coords.latitude || -22.903539;
+          var lang=position.coords.longitude || -43.209587;
+
+          //Google Maps
+          var myLatlng = new google.maps.LatLng(lat,lang);
+          var mapOptions = {zoom: 11, center: myLatlng}
+          var map = new google.maps.Map(document.getElementById('map'), mapOptions);
+          var marker = new google.maps.Marker({position: myLatlng,map: map});
+
+          loadHospitals(map);
+        }
+
+        function onError(error) {
+          alert('code: ' + error.code + '\n' +
+          'message: ' + error.message + '\n');
+        }
+
+        google.maps.event.addDomListener(window, 'load', onSuccess);
+
+    };
+
+    document.addEventListener("deviceready", onDeviceReady, false);
+})(window);
+</script>
+</head>
+<body>
+  <div id="map"></div>
+</body>
+</html>
