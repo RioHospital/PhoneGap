@@ -17,7 +17,7 @@
        under the License.
  */
 
-package com.phonegappro.gmapexample;
+package com.riohospital.app;
 
 import android.os.Bundle;
 import org.apache.cordova.*;
