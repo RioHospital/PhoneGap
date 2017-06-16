@@ -12,6 +12,9 @@
         },
         "cordova-plugin-geolocation": {
             "PACKAGE_NAME": "com.phonegappro.gmapexample"
+        },
+        "cordova-plugin-network-information": {
+            "PACKAGE_NAME": "com.riohospital.app"
         }
     },
     "dependent_plugins": {

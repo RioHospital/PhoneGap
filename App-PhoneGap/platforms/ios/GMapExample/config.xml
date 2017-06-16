@@ -18,6 +18,9 @@
     <feature name="Geolocation">
         <param name="ios-package" value="CDVLocation" />
     </feature>
+    <feature name="NetworkStatus">
+        <param name="ios-package" value="CDVConnection" />
+    </feature>
     <name>RioHospital</name>
     <description>
         Aplicativo que exibe as informações de estabelecimentos de saúde da cidade do Rio de Janeiro.
