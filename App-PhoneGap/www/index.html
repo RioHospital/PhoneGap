@@ -80,7 +80,16 @@ body { height: 100%; margin: 0; padding: 0 }
 
       $.ajax({
         url: "http://riohospital.herokuapp.com/hospitals",
+        error: function(xhr, ajaxOptions, thrownError) {
+          console.error(xhr);
+          console.error(thrownError);
+          alert("Não foi possível conectar ao servidor (erro " + xhr.status + "). Tente novamente mais tarde.");
+        },
         success: function(result) {
+          if(!result) {
+            alert("O servidor retornou dados inválidos. Tente novamente mais tarde.");  
+          }
+            
           for(var i=0; i < result.length; i++) {
             let hospital = result[i];
             let marker = new google.maps.Marker({
