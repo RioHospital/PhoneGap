@@ -7,6 +7,44 @@
 html { height: 100% }
 body { height: 100%; margin: 0; padding: 0 }
 #map { height: 100% }
+input[type=text] {
+    width: 110px;
+	height: 30px;
+    box-sizing: border-box;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    background-color: white;
+    background-position: 10px 10px; 
+    background-repeat: no-repeat;
+    padding: 12px 20px 12px 20px;
+    -webkit-transition: width 0.4s ease-in-out;
+    transition: width 0.4s ease-in-out;
+	position:absolute;
+	z-index:9999;
+	margin-left:120px;
+	margin-top:15px;
+}
+input[type=text]:focus {
+    width: 100%;
+}
+#list-box
+{
+	position:absolute;
+	border: 2px solid #ccc;
+    border-radius: 4px;
+	z-index:9999;
+	width: 110px;
+	padding: 12px 20px 12px 20px;
+	margin-left:120px;
+	width: 100%;
+	margin-top:45px;
+	display:none;
+	overflow:auto;
+	-webkit-transition: width 0.4s ease-in-out;
+    transition: width 0.4s ease-in-out;
+	background-color: white;
+}
 </style>
 <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
 <script type="text/javascript" src="cordova.js"></script>
@@ -70,42 +108,116 @@ body { height: 100%; margin: 0; padding: 0 }
     function deg2rad(degreeValue) {
       return degreeValue * (Math.PI/180);
     }
+	
+	// Creates the search list for the app
+    // Pre-condition: event must be instanciated to a DOM element
+    // Post-condition: the searchList was created and displayed with the proper values
+    // Validation: the function calls $().html that instanciates the list
+	function createSearchList(event)
+	{
+		/*var list_box = document.getElementById("list-box");
+		list_box.style.display = "block";*/
+		var searchText = event.target.value;
+		
+		if(!searchText || searchText.length == 0) {
+			$('#list-box').hide();
+		}
+		else {
+			$('#list-box').show();
+		}
+		
+		let results = [];
+		
+		for(var hospitalName in dictionaryHospital)
+		{
+			let hospitalData = dictionaryHospital[hospitalName];
+			if(hospitalName.toLowerCase().indexOf(searchText.toLowerCase()) !== -1)
+			{
+				results.push({name: hospitalName, marker: hospitalData.marker, hospital: hospitalData.hospital })
+			}
+		}
+		
+		if(results.length == 0)
+			$('#result-box').html('Nenhum resultado encontrado')
+		else {
+			$('#result-box').html('')
+			
+			for(let i in results) {
+				let result = results[i];
+				let button = $('<button class="btn btn-primary">Abrir</button>')
+				
+				let resultItem = $('<div>' + result.name + '</div>')
+				resultItem.click(function() {
+					openInfoWindow(result.marker, result.hospital)
+					$('#searchbar').val("")
+					$('#list-box').hide()
+				})
+				
+				resultItem.append(button)
+				$('#result-box').append(resultItem)
+				$('#result-box').append('<br />')
+			}
+		}
+	}
+	
+	var dictionaryHospital = {};
+	
+	var infowindow = null;
+	
+	// Opens the information window relative to a marker
+    // Pre-condition: marker refers to a google.maps.marker element and hospital is valid
+    // Post-condition: the information window is opened with the proper values
+    // Validation: the function calls infowindow.open that renders the information window
+	function openInfoWindow(marker, hospital) {
+		let contentString = "<h4>" + hospital.name + "</h4>" +
+							"<h6>Distância de você: " + hospital.distance +
+							"<h5>Endereço: " + hospital.address + "</h5>" +
+							"<h5>Bairro: " + hospital.neighborhood + "</h5>" +
+							"<h5>Telefone: " + hospital.phone + "</h5>";
+							
+		if (infowindow) infowindow.close();
+		infowindow = new google.maps.InfoWindow({
+			content: contentString,
+			maxWidth: 200
+		});
+		
+		infowindow.open(map, marker);
+	}
 
     // Loads the hospitals in the API into the map
     // Pre-condition: The API is active; The map was already created; the device's current position was already computed
     // Post-condition: Markers representing the hospitals were added to the map
     // Validation: the ajax call for the API is performed and the callback is the creation of the markers
+
     function loadHospitals(map, currentLat, currentLong) {
-      var infowindow = null;
 
       $.ajax({
         url: "http://riohospital.herokuapp.com/hospitals",
+        error: function(xhr, ajaxOptions, thrownError) {
+          console.error(xhr);
+          console.error(thrownError);
+          alert("Não foi possível conectar ao servidor (erro " + xhr.status + "). Tente novamente mais tarde.");
+        },
         success: function(result) {
+          if(!result) {
+            alert("O servidor retornou dados inválidos. Tente novamente mais tarde.");  
+          }
+            
           for(var i=0; i < result.length; i++) {
             let hospital = result[i];
-            let marker = new google.maps.Marker({
-              icon: "img/hospital-building.png",
-              title: hospital.name,
-              position: new google.maps.LatLng(hospital.latitude,hospital.longitude),
-              map: map
-            });
+			
+			let marker = new google.maps.Marker({
+			  icon: "img/hospital-building.png",
+			  title: hospital.name,
+			  position: new google.maps.LatLng(hospital.latitude,hospital.longitude),
+			  map: map
+			});
+			
+            hospital.distance = getDistanceFromLatLon(currentLat, currentLong, hospital.latitude,hospital.longitude);
+			
+			dictionaryHospital[hospital.name] = {marker, hospital};
 
-            let distance = getDistanceFromLatLon(currentLat, currentLong, hospital.latitude,hospital.longitude);
-
-            let contentString = "<h4>" + hospital.name + "</h4>" +
-                                "<h6>Distância de você: " + distance +
-                                "<h5>Endereço: " + hospital.address + "</h5>" +
-                                "<h5>Bairro: " + hospital.neighborhood + "</h5>" +
-                                "<h5>Telefone: " + hospital.phone + "</h5>";
-
-            google.maps.event.addListener(marker, 'click', function() {
-  						if (infowindow) infowindow.close();
-  						infowindow = new google.maps.InfoWindow({
-  							content: contentString,
-  							maxWidth: 200
-  						});
-      				infowindow.open(map, marker);
-    				});
+            google.maps.event.addListener(marker, 'click', function() { openInfoWindow(marker, hospital) });
           }
         }
       });
@@ -153,6 +265,9 @@ body { height: 100%; margin: 0; padding: 0 }
 
           var circle = new google.maps.Circle(circleOptions);
           circle.bindTo('center', marker, 'position');
+		  
+		  var searchbar = document.getElementById("searchbar");
+		  $('#searchbar').change( createSearchList );
 
           loadHospitals(map, lat, long);
         }
@@ -171,6 +286,19 @@ body { height: 100%; margin: 0; padding: 0 }
 </script>
 </head>
 <body>
-  <div id="map"></div>
+	<input id="searchbar" type="text" name="search" placeholder="Search..">
+	<div id="list-box">
+		Resultados da busca:
+		<div id="result-box">
+			
+		</div>
+	</div>
+	<div id="map"></div>
 </body>
+<script>
+function teste(busca)
+{
+	console.log(busca);
+}
+</script>
 </html>
